@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Know Your Rights – Santa Cruz County</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f5faf6;font-family:'Nunito',sans-serif;}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+// ── CHANGE THIS PASSWORD after deploying ──────────────────────
+const DEFAULT_PW = "SantaCruz2025";
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  return h.toString(36);
+}
+
+// ── Site Content (edit here OR use the in-browser editor) ─────
+const DEFAULTS = {
+  pages: {
+    home: {
+      hero: "You have rights — no matter where you were born.",
+      heroSub: "This site helps Santa Cruz County residents understand their legal rights, especially around immigration. Choose a topic below to get started."
+    },
+    "ice-stop": {
+      title: "ICE Stops You on the Street", eyebrow: "🚶 Immigration", color: "#e8734a",
+      lead: "You have constitutional rights during any encounter with immigration agents — citizen or not.",
+      sections: [
+        { id: "a1", heading: "Stay Calm — You Have Rights", bullets: ["Remain calm and do not run. Running can lead to additional charges.", "Ask: \"Am I free to go?\" If yes, walk away. If no, you are being detained.", "You have the right to remain silent. Say: \"I am exercising my right to remain silent.\"", "Do not lie to federal officers — silence is always safer.", "Do not sign anything without speaking to a lawyer first."], alert: null },
+        { id: "a2", heading: "What ICE Can and Cannot Do", bullets: ["ICE can stop you in public but needs reasonable suspicion to detain you.", "You do NOT have to consent to a search. Say: \"I do not consent to a search.\"", "If detained, say: \"I want to speak with a lawyer.\"", "Do not sign Form I-826 (voluntary departure) without a lawyer."], alert: { type: "warn", text: "Even if your rights are being violated — do not resist. Challenge it later through an attorney." } },
+        { id: "a3", heading: "After the Encounter", bullets: ["Write down officer names, badge numbers, time and location.", "Contact an immigration attorney or legal aid as soon as possible.", "If you received any documents, do not ignore them — deadlines matter."], alert: null },
+      ]
+    },
+    "ice-door": {
+      title: "ICE at Your Door", eyebrow: "🚪 Immigration", color: "#d95f5f",
+      lead: "You do not have to open your door. ICE cannot enter your home without a judicial warrant signed by a judge.",
+      sections: [
+        { id: "b1", heading: "Do Not Open the Door", bullets: ["Stay inside and speak through the door. You are NOT required to open it.", "Ask: \"Do you have a judicial warrant?\" Request they slide it under the door.", "An ICE administrative warrant (Form I-200/I-205) is NOT signed by a judge.", "If no judicial warrant: \"I do not consent to your entry.\""], alert: { type: "info", text: "A valid judicial warrant says 'United States District Court', lists your address, and is signed by a judge — not an ICE supervisor." } },
+        { id: "b2", heading: "If They Force Entry", bullets: ["Do NOT physically resist.", "Say clearly: \"I do not consent to this search.\"", "Ask for a lawyer immediately.", "Do not sign any documents.", "After they leave — document everything and call legal aid."], alert: { type: "warn", text: "Opening the door voluntarily may be considered consent to entry. Always speak through the door first." } },
+        { id: "b3", heading: "Prepare Your Household", bullets: ["Make a family safety plan — everyone should know what to do.", "Post a 'No Consent' sign by your door in English and Spanish.", "Memorize your attorney's number or keep it on a card in your wallet.", "Designate a trusted person to care for children if you are detained."], alert: { type: "tip", text: "The ACLU offers free printable 'No Consent' door signs. The Santa Cruz Rapid Response Network can help you create a family safety plan." } },
+      ]
+    },
+    "police-door": {
+      title: "Police at Your Door", eyebrow: "🏠 Police Rights", color: "#5b8dd9",
+      lead: "Local Santa Cruz police operate under California's sanctuary laws, which offer important protections.",
+      sections: [
+        { id: "c1", heading: "Your Rights at the Door", bullets: ["You do not have to open the door without a valid warrant.", "Ask who it is and what agency before opening.", "A warrant must be signed by a judge and name your address or your name.", "\"Knock and talk\" is a police tactic — you are never required to cooperate."], alert: null },
+        { id: "c2", heading: "California Sanctuary Laws", bullets: ["SB 54 prohibits local agencies from assisting with civil immigration enforcement.", "The TRUTH Act gives people in local custody the right to refuse an ICE interview.", "Local police generally cannot ask about your immigration status.", "Santa Cruz County has additional policies restricting ICE cooperation."], alert: { type: "tip", text: "These protections apply to local agencies only — federal ICE agents operate under federal law." } },
+      ]
+    },
+    "traffic": {
+      title: "Traffic Stops", eyebrow: "🚗 Police Rights", color: "#6db87a",
+      lead: "Traffic stops are common. In California, AB 60 lets undocumented residents get a driver's license — and you have rights during every stop.",
+      sections: [
+        { id: "d1", heading: "What To Do When Pulled Over", bullets: ["Pull over safely and promptly. Turn on hazard lights.", "Stay in the car. Keep hands visible on the steering wheel.", "Provide your license, registration, and insurance when asked.", "AB 60 licenses are valid — officers cannot assume your status from them.", "You may remain silent beyond ID. Say: \"I am exercising my right to remain silent.\""], alert: null },
+        { id: "d2", heading: "Refusing a Vehicle Search", bullets: ["You have the right to refuse. Say: \"I do not consent to a search.\"", "If they search anyway — do not physically resist.", "Keep repeating: \"I do not consent to this search.\"", "Write down everything that happened as soon as the stop is over."], alert: { type: "warn", text: "Police cannot pull you over solely because they suspect you are undocumented. A stop requires a lawful reason." } },
+      ]
+    },
+    "arrested": {
+      title: "If You Are Detained", eyebrow: "⚖️ Your Rights", color: "#9b72cb",
+      lead: "Being detained is frightening — but you have rights throughout the entire process.",
+      sections: [
+        { id: "e1", heading: "Your Core Rights When Detained", bullets: ["Ask: \"Am I free to go?\" If no — ask why you are being detained.", "\"I am exercising my right to remain silent.\"", "\"I want to speak with a lawyer.\" — They must stop questioning you.", "Do not physically resist, even if the detention is unlawful.", "Do NOT sign anything — especially voluntary departure forms."], alert: null },
+        { id: "e2", heading: "Your Right to Phone Calls", bullets: ["In California, after booking you have the right to 3 completed calls within 3 hours.", "Call an immigration attorney or legal aid hotline first.", "Call a trusted family member who can alert your community.", "Memorize at least one number — you may not have phone access right away."], alert: { type: "tip", text: "Keep a lawyer's number and emergency contact on a card in your wallet — don't rely solely on your phone." } },
+        { id: "e3", heading: "Do Not Sign Voluntary Departure", bullets: ["ICE may pressure you to sign — do NOT sign without a lawyer.", "These agreements can permanently bar you from returning to the US.", "They waive your right to a hearing before an immigration judge.", "Always wait for a lawyer, no matter the pressure."], alert: { type: "warn", text: "Signing a voluntary departure order is a major decision with lifelong consequences. Always consult a lawyer first." } },
+      ]
+    },
+    "work": {
+      title: "Your Rights at Work", eyebrow: "🏢 Workplace", color: "#e8a93a",
+      lead: "All workers in the US have labor rights regardless of immigration status.",
+      sections: [
+        { id: "f1", heading: "During a Workplace ICE Raid", bullets: ["Remain calm. You still have rights during a raid.", "Ask if you are free to go. If yes — leave calmly.", "ICE must have a judicial warrant to enter non-public areas.", "You are not required to show immigration documents unless ICE has a warrant naming you.", "Do not run — it escalates the situation."], alert: null },
+        { id: "f2", heading: "Your Labor Rights", bullets: ["You have the right to be paid minimum wage for all hours worked.", "You have the right to a safe workplace.", "You can organize and join a union regardless of immigration status.", "File a wage claim with California's Labor Commissioner if underpaid.", "You are protected from retaliation for reporting workplace violations."], alert: { type: "tip", text: "Under AB 263 and SB 666, it is illegal for employers to threaten workers with ICE as retaliation." } },
+      ]
+    },
+    "school": {
+      title: "Your Rights at School", eyebrow: "🎓 Education", color: "#5db8c0",
+      lead: "Schools are protected spaces. Under Plyler v. Doe, every child has the right to a public education regardless of immigration status.",
+      sections: [
+        { id: "g1", heading: "Children's Right to Education", bullets: ["All children have the right to attend public school — Plyler v. Doe (1982).", "Schools cannot ask for immigration documents for enrollment.", "Schools cannot report students or families to immigration authorities.", "Under FERPA, schools cannot share student records without parental consent."], alert: null },
+        { id: "g2", heading: "If ICE Comes to a School", bullets: ["ICE generally cannot enter school campuses without a judicial warrant.", "School administrators should require a valid judicial warrant before granting access.", "Parents and guardians must be notified immediately of any enforcement action.", "Santa Cruz school districts have adopted protections for immigrant families."], alert: { type: "tip", text: "Ask your school district for a copy of their immigration enforcement response policy." } },
+      ]
+    },
+  },
+  resources: [
+    { id: "r1", category: "⚖️ Legal Aid", name: "Central California Legal Services", desc: "Free civil legal services including immigration for low-income residents.", phone: "(831) 425-6252", url: "" },
+    { id: "r2", category: "⚖️ Legal Aid", name: "Catholic Charities – Diocese of Monterey", desc: "Immigration legal services: DACA renewal, family petitions, naturalization.", phone: "(831) 490-0909", url: "" },
+    { id: "r3", category: "⚖️ Legal Aid", name: "Immigrant Legal Defense (ILD)", desc: "Free legal representation for detained immigrants in Northern California.", phone: "", url: "immigrantlegal.org" },
+    { id: "r4", category: "🚨 Rapid Response", name: "Santa Cruz Rapid Response Network", desc: "Community volunteers responding to immigration enforcement. Contact local immigrant rights coalition for hotline number.", phone: "", url: "crla.org" },
+    { id: "r5", category: "🚨 Rapid Response", name: "Immigrant Defense Project", desc: "Legal support line for people facing immigration enforcement.", phone: "", url: "immdefense.org" },
+    { id: "r6", category: "🏥 Health Services", name: "Santa Cruz Community Health Centers", desc: "Federally Qualified Health Center. All patients served regardless of status or ability to pay. Sliding scale fees.", phone: "(831) 464-3300", url: "" },
+    { id: "r7", category: "🤝 Community Orgs", name: "Pajaro Valley Prevention & Student Assistance", desc: "Youth and family bilingual support services for the Watsonville area.", phone: "", url: "pvpsa.org" },
+    { id: "r8", category: "🤝 Community Orgs", name: "ACLU of Northern California", desc: "Know Your Rights guides and free printable 'No Consent' door signs.", phone: "", url: "aclunc.org" },
+    { id: "r9", category: "🍎 Food & Basic Needs", name: "Second Harvest Food Bank", desc: "Free food distribution across Santa Cruz County. No documentation required.", phone: "(831) 761-8880", url: "thefoodbank.org" },
+    { id: "r10", category: "🍎 Food & Basic Needs", name: "211 Santa Cruz County", desc: "Free confidential referrals for health and human services. Available 24/7.", phone: "211", url: "" },
+  ]
+};
+
+const NAV = [
+  { id: "ice-stop", label: "ICE Stops You" },
+  { id: "ice-door", label: "ICE at Your Door" },
+  { id: "police-door", label: "Police at Door" },
+  { id: "traffic", label: "Traffic Stops" },
+  { id: "arrested", label: "If Detained" },
+  { id: "work", label: "At Work" },
+  { id: "school", label: "At School" },
+  { id: "resources", label: "Resources" },
+];
+
+const LANGS = [
+  { code: "en", label: "EN 🇺🇸", name: "English" },
+  { code: "es", label: "ES 🇲🇽", name: "Spanish" },
+  { code: "pt", label: "PT 🇧🇷", name: "Portuguese" },
+];
+
+function uid() { return Math.random().toString(36).slice(2, 8); }
+
+// ── Storage (localStorage for deployed site) ──────────────────
+function loadData() {
+  try { const s = localStorage.getItem("kyr_sc_data"); if (s) return JSON.parse(s); } catch {}
+  return null;
+}
+function saveData(d) { try { localStorage.setItem("kyr_sc_data", JSON.stringify(d)); } catch {} }
+function loadPw() { try { return localStorage.getItem("kyr_sc_pw") || null; } catch {} return null; }
+function savePw(h) { try { localStorage.setItem("kyr_sc_pw", h); } catch {} }
+
+// ── Translation (calls Anthropic API) ────────────────────────
+const txCache = {};
+async function runTranslation(data, targetLang) {
+  if (txCache[targetLang]) return txCache[targetLang];
+  const langName = targetLang === "es" ? "Latin American Spanish" : "Brazilian Portuguese";
+  const payload = {
+    homeHero: data.pages.home.hero,
+    homeHeroSub: data.pages.home.heroSub,
+    navLabels: NAV.map(n => n.label),
+    quickRights: ["You have the right to remain silent","You do NOT have to open your door","You have the right to a lawyer","You can refuse a search of your home or car"],
+    ui: { findHelp: "Find Local Help →", chooseSituation: "Choose Your Situation", coreRights: "Your Core Rights at a Glance", localResources: "Local Resources", backHome: "← Back to Home", learnMore: "Learn more →", inEmergency: "In an emergency, call 211 for free referrals.", footerNote: "This website provides general information only and is not legal advice. Consult a qualified immigration attorney." },
+    pages: Object.fromEntries(Object.entries(data.pages).filter(([k]) => k !== "home").map(([k, v]) => [k, { title: v.title, lead: v.lead, sections: v.sections.map(s => ({ heading: s.heading, bullets: s.bullets, alertText: s.alert?.text || null })) }])),
+    resourceNames: data.resources.map(r => r.name),
+    resourceDescs: data.resources.map(r => r.desc),
+  };
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4000,
+      messages: [{ role: "user", content: `Translate all string values in this JSON to ${langName} for an immigrant legal rights website. Keep legal terms accurate. Do NOT translate: ICE, AB 60, SB 54, TRUTH Act, Plyler v. Doe, DACA, FERPA, ACLU, I-200, I-205, I-826, AB 263, SB 666, California, Santa Cruz. Preserve JSON structure exactly. Return ONLY valid JSON, no markdown.\n\n${JSON.stringify(payload)}` }]
+    })
+  });
+  const json = await res.json();
+  const raw = json.content.map(c => c.text || "").join("").replace(/```json|```/g, "").trim();
+  const result = JSON.parse(raw);
+  txCache[targetLang] = result;
+  return result;
+}
+
+// ── UI Components ─────────────────────────────────────────────
+function Toast({ msg }) {
+  return <div style={{ position:"fixed",bottom:24,right:24,zIndex:9999,background:"#1a3a2a",color:"#fff",borderRadius:12,padding:"12px 22px",fontSize:14,fontWeight:700,boxShadow:"0 8px 32px rgba(0,0,0,0.25)",animation:"fadein .3s ease" }}>{msg}</div>;
+}
+
+function Modal({ open, onClose, title, children }) {
+  if (!open) return null;
+  return (
+    <div onClick={onClose} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:"#fff",borderRadius:20,padding:"36px 32px",width:"min(460px,92vw)",boxShadow:"0 24px 64px rgba(0,0,0,0.2)",maxHeight:"90vh",overflowY:"auto" }}>
+        <div style={{ fontWeight:900,fontSize:20,color:"#1a3a2a",marginBottom:20 }}>{title}</div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Btn({ children, onClick, variant="primary", style:x={} }) {
+  const v = { primary:{background:"#2d7a4f",color:"#fff"}, secondary:{background:"#eaf4ee",color:"#2d5a3d"}, danger:{background:"#fde8e8",color:"#c0392b"}, gold:{background:"#f5a623",color:"#fff"} };
+  return <button style={{ fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:14,borderRadius:10,border:"none",cursor:"pointer",padding:"10px 20px",...v[variant],...x }} onClick={onClick}>{children}</button>;
+}
+
+function FInput({ value, onChange, placeholder, multi }) {
+  const s = { width:"100%",borderRadius:10,border:"1.5px solid #d4e6da",padding:"10px 14px",fontFamily:"'Nunito',sans-serif",fontSize:14,color:"#1a3a2a",background:"#f7fcf8",outline:"none",boxSizing:"border-box",resize:multi?"vertical":undefined,minHeight:multi?80:undefined };
+  return multi ? <textarea style={s} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/> : <input style={s} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>;
+}
+
+function AlertBox({ type, text, editing, onChange, onRemove }) {
+  const cfg = { warn:{bg:"#fff8f0",border:"#f5a623",icon:"⚠️",label:"Important"}, tip:{bg:"#f0faf4",border:"#4caf7d",icon:"✅",label:"Tip"}, info:{bg:"#f0f6ff",border:"#5b8dd9",icon:"📋",label:"Note"} };
+  const c = cfg[type]||cfg.info;
+  return (
+    <div style={{ marginTop:14,background:c.bg,borderLeft:`4px solid ${c.border}`,borderRadius:"0 12px 12px 0",padding:"14px 18px" }}>
+      <div style={{ fontWeight:800,fontSize:13,marginBottom:6,color:"#1a3a2a" }}>{c.icon} {c.label}</div>
+      {editing ? <><textarea value={text} onChange={e=>onChange(e.target.value)} style={{ width:"100%",border:"1px dashed #b5cfc0",borderRadius:8,padding:"8px 10px",fontSize:13,background:"transparent",resize:"vertical",minHeight:60,fontFamily:"'Nunito',sans-serif",outline:"none" }}/><Btn variant="danger" style={{ marginTop:6,fontSize:12,padding:"4px 10px" }} onClick={onRemove}>Remove</Btn></> : <div style={{ fontSize:14,color:"#2d4a36",lineHeight:1.65 }}>{text}</div>}
+    </div>
+  );
+}
+
+function SectionCard({ section, editing, onChange, onDelete, onMoveUp, onMoveDown, color }) {
+  const [nb, setNb] = useState("");
+  return (
+    <div style={{ background:"#fff",borderRadius:18,padding:"28px 28px 22px",marginBottom:18,boxShadow:"0 2px 18px rgba(0,0,0,0.07)",border:editing?`2px dashed ${color}55`:"2px solid #f0f7f0",position:"relative" }}>
+      {editing && <div style={{ position:"absolute",top:14,right:14,display:"flex",gap:6 }}>
+        <Btn variant="secondary" style={{ padding:"3px 9px",fontSize:13 }} onClick={onMoveUp}>↑</Btn>
+        <Btn variant="secondary" style={{ padding:"3px 9px",fontSize:13 }} onClick={onMoveDown}>↓</Btn>
+        <Btn variant="danger" style={{ padding:"3px 9px",fontSize:13 }} onClick={onDelete}>✕</Btn>
+      </div>}
+      {editing
+        ? <input value={section.heading} onChange={e=>onChange({...section,heading:e.target.value})} style={{ width:"100%",fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:17,color,border:"none",borderBottom:`2px dashed ${color}77`,background:"transparent",outline:"none",marginBottom:14 }}/>
+        : <h2 style={{ fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:17,color,marginBottom:14 }}>{section.heading}</h2>}
+      <ul style={{ listStyle:"none",padding:0,margin:0 }}>
+        {section.bullets.map((b,i) => (
+          <li key={i} style={{ display:"flex",alignItems:"flex-start",gap:10,marginBottom:10 }}>
+            <span style={{ marginTop:7,width:7,height:7,borderRadius:"50%",background:color,flexShrink:0 }}/>
+            {editing
+              ? <div style={{ flex:1,display:"flex",gap:6 }}>
+                  <textarea value={b} onChange={e=>{const bl=[...section.bullets];bl[i]=e.target.value;onChange({...section,bullets:bl});}} rows={2} style={{ flex:1,border:"1px dashed #c5dcc9",borderRadius:8,padding:"6px 10px",fontSize:14,fontFamily:"'Nunito',sans-serif",resize:"vertical",outline:"none",background:"#f7fcf8" }}/>
+                  <Btn variant="danger" style={{ padding:"3px 8px",fontSize:12,alignSelf:"flex-start" }} onClick={()=>onChange({...section,bullets:section.bullets.filter((_,j)=>j!==i)})}>✕</Btn>
+                </div>
+              : <span style={{ fontSize:15,color:"#2d4a36",lineHeight:1.65 }}>{b}</span>}
+          </li>
+        ))}
+      </ul>
+      {editing && <div style={{ display:"flex",gap:8,marginTop:10 }}>
+        <input value={nb} onChange={e=>setNb(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&nb.trim()){onChange({...section,bullets:[...section.bullets,nb.trim()]});setNb("");}}} placeholder="Add bullet point (press Enter)…" style={{ flex:1,borderRadius:8,border:"1.5px solid #d4e6da",padding:"8px 12px",fontFamily:"'Nunito',sans-serif",fontSize:14,outline:"none",background:"#f7fcf8" }}/>
+        <Btn variant="primary" style={{ padding:"8px 14px",fontSize:13 }} onClick={()=>{if(nb.trim()){onChange({...section,bullets:[...section.bullets,nb.trim()]});setNb("")}}}>+</Btn>
+      </div>}
+      {section.alert && <AlertBox type={section.alert.type} text={section.alert.text} editing={editing} onChange={v=>onChange({...section,alert:{...section.alert,text:v}})} onRemove={()=>onChange({...section,alert:null})}/>}
+      {editing && !section.alert && <div style={{ marginTop:12,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap" }}>
+        <span style={{ fontSize:12,color:"#8aaa94" }}>Add box:</span>
+        {["warn","tip","info"].map(t=><Btn key={t} variant="secondary" style={{ fontSize:11,padding:"3px 10px" }} onClick={()=>onChange({...section,alert:{type:t,text:"Add your text here."}})}>{t==="warn"?"⚠️":t==="tip"?"✅":"📋"} {t}</Btn>)}
+      </div>}
+    </div>
+  );
+}
+
+function RightsPage({ pageId, data, editing, onUpdate, onBack, tx, uiTx }) {
+  const page = data.pages[pageId];
+  if (!page) return null;
+  const txP = tx?.pages?.[pageId];
+  const getSection = (s,i) => {
+    if(!txP?.sections?.[i]) return s;
+    const t=txP.sections[i];
+    return {...s,heading:t.heading||s.heading,bullets:t.bullets||s.bullets,alert:s.alert?{...s.alert,text:t.alertText||s.alert.text}:null};
+  };
+  const upd=(i,v)=>{const secs=[...page.sections];secs[i]=v;onUpdate({...page,sections:secs});};
+  const del=i=>onUpdate({...page,sections:page.sections.filter((_,j)=>j!==i)});
+  const move=(i,d)=>{const secs=[...page.sections];const j=i+d;if(j<0||j>=secs.length)return;[secs[i],secs[j]]=[secs[j],secs[i]];onUpdate({...page,sections:secs});};
+  return (
+    <div style={{ maxWidth:760,margin:"0 auto",padding:"40px 24px 80px" }}>
+      <button onClick={onBack} style={{ background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:14,color:"#6b8c76",display:"flex",alignItems:"center",gap:6,marginBottom:28,padding:0 }}>{uiTx?.backHome||"← Back to Home"}</button>
+      <div style={{ marginBottom:40 }}>
+        <div style={{ fontSize:12,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",color:page.color,marginBottom:10 }}>{page.eyebrow}</div>
+        <h1 style={{ fontFamily:"'Nunito',sans-serif",fontWeight:900,fontSize:"clamp(1.8rem,5vw,2.8rem)",color:"#1a3a2a",marginBottom:16,lineHeight:1.1 }}>{txP?.title||page.title}</h1>
+        <div style={{ borderLeft:`4px solid ${page.color}`,paddingLeft:18 }}>
+          {editing?<textarea value={page.lead} onChange={e=>onUpdate({...page,lead:e.target.value})} style={{ width:"100%",border:"1px dashed #b5cfc0",borderRadius:8,padding:"10px 12px",fontFamily:"'Nunito',sans-serif",fontSize:15,color:"#2d4a36",resize:"vertical",minHeight:70,background:"#f7fcf8",outline:"none" }}/>:<p style={{ fontSize:15,color:"#2d4a36",lineHeight:1.75,margin:0 }}>{txP?.lead||page.lead}</p>}
+        </div>
+      </div>
+      {page.sections.map((s,i)=><SectionCard key={s.id} section={editing?s:getSection(s,i)} editing={editing} color={page.color} onChange={v=>upd(i,v)} onDelete={()=>del(i)} onMoveUp={()=>move(i,-1)} onMoveDown={()=>move(i,1)}/>)}
+      {editing&&<button onClick={()=>onUpdate({...page,sections:[...page.sections,{id:uid(),heading:"New Section",bullets:["Add your content here."],alert:null}]})} style={{ width:"100%",background:"#f0faf4",border:"2px dashed #a8d5b8",borderRadius:14,padding:18,fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:14,color:"#4caf7d",cursor:"pointer",marginTop:4 }}>+ Add New Section</button>}
+    </div>
+  );
+}
+
+function ResourcesPage({ resources, editing, onUpdate, onBack, tx, uiTx }) {
+  const [addModal,setAddModal]=useState(false);
+  const [form,setForm]=useState({category:"",name:"",desc:"",phone:"",url:""});
+  const cats=[...new Set(resources.map(r=>r.category))];
+  const getRes=(r,i)=>({...r,name:tx?.resourceNames?.[i]||r.name,desc:tx?.resourceDescs?.[i]||r.desc});
+  return (
+    <div style={{ maxWidth:860,margin:"0 auto",padding:"40px 24px 80px" }}>
+      <button onClick={onBack} style={{ background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:14,color:"#6b8c76",display:"flex",alignItems:"center",gap:6,marginBottom:28,padding:0 }}>{uiTx?.backHome||"← Back to Home"}</button>
+      <div style={{ marginBottom:44 }}>
+        <div style={{ fontSize:12,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",color:"#4caf7d",marginBottom:10 }}>Santa Cruz County</div>
+        <h1 style={{ fontFamily:"'Nunito',sans-serif",fontWeight:900,fontSize:"clamp(1.8rem,5vw,2.8rem)",color:"#1a3a2a",marginBottom:14 }}>{uiTx?.localResources||"Local Resources"}</h1>
+        <p style={{ fontSize:15,color:"#4a6a54",lineHeight:1.7,maxWidth:560 }}>{uiTx?.inEmergency||"In an emergency, call 211 for free referrals to local services."}</p>
+      </div>
+      {cats.map(cat=>(
+        <div key={cat} style={{ marginBottom:44 }}>
+          <div style={{ fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:17,color:"#1a3a2a",marginBottom:16,paddingBottom:12,borderBottom:"2px solid #e8f4ec" }}>{cat}</div>
+          <div style={{ display:"grid",gap:12 }}>
+            {resources.map((r,i)=>r.category!==cat?null:(
+              <div key={r.id} style={{ background:"#fff",borderRadius:14,padding:"20px 22px",boxShadow:"0 2px 12px rgba(0,0,0,0.06)",border:editing?"2px dashed #a8d5b8":"2px solid #f0f7f0",position:"relative" }}>
+                {editing&&<Btn variant="danger" style={{ position:"absolute",top:10,right:10,padding:"3px 9px",fontSize:12 }} onClick={()=>onUpdate(resources.filter(x=>x.id!==r.id))}>✕</Btn>}
+                {editing?<div style={{ display:"grid",gap:8 }}>
+                  <input value={r.name} onChange={e=>onUpdate(resources.map(x=>x.id===r.id?{...x,name:e.target.value}:x))} style={{ fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:15,border:"1px dashed #b5cfc0",borderRadius:8,padding:"6px 10px",outline:"none",background:"#f7fcf8" }}/>
+                  <textarea value={r.desc} onChange={e=>onUpdate(resources.map(x=>x.id===r.id?{...x,desc:e.target.value}:x))} style={{ fontFamily:"'Nunito',sans-serif",fontSize:14,border:"1px dashed #b5cfc0",borderRadius:8,padding:"6px 10px",outline:"none",background:"#f7fcf8",resize:"vertical" }}/>
+                  <div style={{ display:"flex",gap:8 }}>
+                    <input value={r.phone} onChange={e=>onUpdate(resources.map(x=>x.id===r.id?{...x,phone:e.target.value}:x))} placeholder="Phone" style={{ flex:1,fontFamily:"'Nunito',sans-serif",fontSize:13,border:"1px dashed #b5cfc0",borderRadius:8,padding:"6px 10px",outline:"none",background:"#f7fcf8" }}/>
+                    <input value={r.url} onChange={e=>onUpdate(resources.map(x=>x.id===r.id?{...x,url:e.target.value}:x))} placeholder="Website" style={{ flex:1,fontFamily:"'Nunito',sans-serif",fontSize:13,border:"1px dashed #b5cfc0",borderRadius:8,padding:"6px 10px",outline:"none",background:"#f7fcf8" }}/>
+                  </div>
+                </div>:(()=>{const d=getRes(r,i);return<>
+                  <div style={{ fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:15,color:"#1a3a2a",marginBottom:6 }}>{d.name}</div>
+                  <div style={{ fontSize:14,color:"#4a6a54",lineHeight:1.6,marginBottom:(r.phone||r.url)?10:0 }}>{d.desc}</div>
+                  <div style={{ display:"flex",gap:14,flexWrap:"wrap" }}>
+                    {r.phone&&<a href={`tel:${r.phone}`} style={{ fontSize:13,fontWeight:700,color:"#2d7a4f",textDecoration:"none" }}>📞 {r.phone}</a>}
+                    {r.url&&<a href={`https://${r.url}`} target="_blank" rel="noreferrer" style={{ fontSize:13,fontWeight:700,color:"#2d7a4f",textDecoration:"none" }}>🔗 {r.url}</a>}
+                  </div>
+                </>;})()} 
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      {editing&&<button onClick={()=>setAddModal(true)} style={{ width:"100%",background:"#f0faf4",border:"2px dashed #a8d5b8",borderRadius:14,padding:18,fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:14,color:"#4caf7d",cursor:"pointer" }}>+ Add Resource</button>}
+      <Modal open={addModal} onClose={()=>setAddModal(false)} title="Add Resource">
+        {[["Category","category","e.g. ⚖️ Legal Aid"],["Name","name","Organization name"],["Description","desc","Description…"],["Phone","phone","(831) 000-0000"],["Website","url","example.org"]].map(([lbl,key,ph])=>(
+          <div key={key} style={{ marginBottom:14 }}>
+            <div style={{ fontSize:12,fontWeight:700,color:"#6b8c76",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:5 }}>{lbl}</div>
+            <FInput value={form[key]} onChange={v=>setForm(f=>({...f,[key]:v}))} placeholder={ph} multi={key==="desc"}/>
+          </div>
+        ))}
+        <div style={{ display:"flex",gap:10,justifyContent:"flex-end",marginTop:8 }}>
+          <Btn variant="secondary" onClick={()=>setAddModal(false)}>Cancel</Btn>
+          <Btn variant="primary" onClick={()=>{if(!form.name.trim())return;onUpdate([...resources,{...form,id:uid()}]);setForm({category:"",name:"",desc:"",phone:"",url:""});setAddModal(false);}}>Add Resource</Btn>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function HomePage({ data, editing, onNavigate, onUpdateHome, tx, uiTx, navTx }) {
+  const home=data.pages.home;
+  const cards=[
+    {id:"ice-stop",color:"#e8734a",icon:"🚶",tag:"Immigration",desc:"What to say and do during an ICE encounter in public."},
+    {id:"ice-door",color:"#d95f5f",icon:"🚪",tag:"Immigration",desc:"Your rights when ICE knocks — you don't have to open the door."},
+    {id:"police-door",color:"#5b8dd9",icon:"🏠",tag:"Police Rights",desc:"What local police can and can't do under California sanctuary law."},
+    {id:"traffic",color:"#6db87a",icon:"🚗",tag:"Police Rights",desc:"Your rights at a traffic stop, including AB 60 license protections."},
+    {id:"arrested",color:"#9b72cb",icon:"⚖️",tag:"General",desc:"Rights to silence, a lawyer, and phone calls when detained."},
+    {id:"work",color:"#e8a93a",icon:"🏢",tag:"Workplace",desc:"Workplace raid rights and labor protections for all workers."},
+    {id:"school",color:"#5db8c0",icon:"🎓",tag:"Education",desc:"Every child has the right to public school regardless of status."},
+    {id:"resources",color:"#4caf7d",icon:"📋",tag:"Help",desc:"Legal aid, rapid response, health, food & community organizations."},
+  ];
+  const qr=tx?.quickRights||["You have the right to remain silent","You do NOT have to open your door","You have the right to a lawyer","You can refuse a search of your home or car"];
+  const getTitle=id=>tx?.pages?.[id]?.title||data.pages[id]?.title||id;
+  const getNav=id=>{const i=NAV.findIndex(n=>n.id===id);return navTx?.[i]||NAV[i]?.label||id;};
+  return (
+    <div>
+      <div style={{ background:"linear-gradient(140deg,#1a3a2a 0%,#2d6045 60%,#3a7a52 100%)",padding:"80px 32px 72px",textAlign:"center",position:"relative",overflow:"hidden" }}>
+        <div style={{ position:"absolute",inset:0,opacity:0.04,backgroundImage:"radial-gradient(circle,#fff 1px,transparent 1px)",backgroundSize:"26px 26px" }}/>
+        <div style={{ position:"relative",maxWidth:640,margin:"0 auto" }}>
+          <div style={{ display:"inline-block",background:"rgba(255,255,255,0.13)",borderRadius:30,padding:"6px 18px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:12,color:"#a8f0c0",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:24 }}>Santa Cruz County</div>
+          {editing?<>
+            <input value={home.hero} onChange={e=>onUpdateHome({...home,hero:e.target.value})} style={{ display:"block",width:"100%",background:"transparent",border:"1px dashed rgba(255,255,255,0.4)",borderRadius:10,padding:"8px 14px",fontFamily:"'Nunito',sans-serif",fontWeight:900,fontSize:"clamp(1.8rem,5vw,2.8rem)",color:"#fff",outline:"none",textAlign:"center",marginBottom:16 }}/>
+            <textarea value={home.heroSub} onChange={e=>onUpdateHome({...home,heroSub:e.target.value})} style={{ display:"block",width:"100%",background:"transparent",border:"1px dashed rgba(255,255,255,0.4)",borderRadius:10,padding:"8px 14px",fontFamily:"'Nunito',sans-serif",fontSize:16,color:"rgba(255,255,255,0.85)",outline:"none",resize:"vertical",textAlign:"center",minHeight:80 }}/>
+          </>:<>
+            <h1 style={{ fontFamily:"'Nunito',sans-serif",fontWeight:900,fontSize:"clamp(2rem,5vw,3.2rem)",color:"#fff",marginBottom:18,lineHeight:1.1 }}>{tx?.homeHero||home.hero}</h1>
+            <p style={{ fontSize:16,color:"rgba(255,255,255,0.82)",lineHeight:1.8,marginBottom:36 }}>{tx?.homeHeroSub||home.heroSub}</p>
+          </>}
+          <button onClick={()=>onNavigate("resources")} style={{ background:"#4caf7d",color:"#fff",border:"none",borderRadius:14,padding:"15px 32px",fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:15,cursor:"pointer",boxShadow:"0 4px 18px rgba(76,175,125,0.4)" }}>{uiTx?.findHelp||"Find Local Help →"}</button>
+        </div>
+      </div>
+      <div style={{ background:"#f0faf4",padding:"32px 24px",borderBottom:"2px solid #daf0e2" }}>
+        <div style={{ maxWidth:900,margin:"0 auto" }}>
+          <div style={{ fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:13,color:"#2d7a4f",marginBottom:16,textAlign:"center",textTransform:"uppercase",letterSpacing:"0.12em" }}>{uiTx?.coreRights||"Your Core Rights at a Glance"}</div>
+          <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12 }}>
+            {qr.map((r,i)=>(
+              <div key={i} style={{ background:"#fff",borderRadius:14,padding:"16px 18px",display:"flex",alignItems:"flex-start",gap:10,boxShadow:"0 1px 8px rgba(0,0,0,0.06)",border:"1.5px solid #daf0e2" }}>
+                <span style={{ color:"#4caf7d",fontWeight:900,fontSize:15,flexShrink:0,marginTop:1 }}>✓</span>
+                <span style={{ fontFamily:"'Nunito',sans-serif",fontWeight:600,fontSize:14,color:"#1a3a2a",lineHeight:1.5 }}>{r}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div style={{ maxWidth:980,margin:"0 auto",padding:"56px 24px 80px" }}>
+        <div style={{ fontFamily:"'Nunito',sans-serif",fontWeight:900,fontSize:22,color:"#1a3a2a",marginBottom:28,textAlign:"center" }}>{uiTx?.chooseSituation||"Choose Your Situation"}</div>
+        <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:18 }}>
+          {cards.map(c=>(
+            <button key={c.id} onClick={()=>onNavigate(c.id)}
+              style={{ background:"#fff",border:"2px solid #e8f4ec",borderRadius:20,padding:"26px 22px 22px",textAlign:"left",cursor:"pointer",boxShadow:"0 2px 14px rgba(0,0,0,0.06)",transition:"all .2s",fontFamily:"'Nunito',sans-serif",width:"100%" }}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=c.color;e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow=`0 10px 32px ${c.color}28`;}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="#e8f4ec";e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 2px 14px rgba(0,0,0,0.06)";}}>
+              <div style={{ display:"inline-block",background:`${c.color}18`,borderRadius:8,padding:"3px 10px",fontSize:11,fontWeight:700,color:c.color,marginBottom:14,letterSpacing:"0.08em",textTransform:"uppercase" }}>{c.tag}</div>
+              <div style={{ fontSize:30,marginBottom:10 }}>{c.icon}</div>
+              <div style={{ fontWeight:800,fontSize:15,color:"#1a3a2a",marginBottom:8,lineHeight:1.3 }}>{getTitle(c.id)}</div>
+              <div style={{ fontSize:13,color:"#6b8c76",lineHeight:1.6 }}>{c.desc}</div>
+              <div style={{ marginTop:16,color:c.color,fontWeight:700,fontSize:13 }}>{uiTx?.learnMore||"Learn more →"}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────
+function App() {
+  const [data,setData]=useState(()=>loadData()||DEFAULTS);
+  const [page,setPage]=useState("home");
+  const [editing,setEditing]=useState(false);
+  const [toast,setToast]=useState(null);
+  const [loginOpen,setLoginOpen]=useState(false);
+  const [pw,setPw]=useState("");
+  const [pwErr,setPwErr]=useState("");
+  const [mobileOpen,setMobileOpen]=useState(false);
+  const [lang,setLang]=useState("en");
+  const [translating,setTranslating]=useState(false);
+  const [translations,setTranslations]=useState({});
+
+  const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),3000);};
+  const save=d=>{saveData(d);showToast("💾 Changes saved!");};
+  const updatePage=useCallback((id,v)=>setData(prev=>{const n={...prev,pages:{...prev.pages,[id]:v}};saveData(n);return n;}),[]);
+  const updateResources=useCallback(res=>setData(prev=>{const n={...prev,resources:res};saveData(n);return n;}),[]);
+
+  const checkLogin=()=>{
+    const stored=loadPw();
+    const ok=stored?hashStr(pw)===stored:pw===DEFAULT_PW;
+    if(ok){setEditing(true);setLoginOpen(false);setPw("");setPwErr("");showToast("✏️ Edit mode on");}
+    else setPwErr("Incorrect password. Try again.");
+  };
+
+  const handleLang=async code=>{
+    if(code==="en"){setLang("en");return;}
+    if(translating)return;
+    if(translations[code]){setLang(code);return;}
+    setTranslating(true);
+    showToast(`🌐 Translating to ${LANGS.find(l=>l.code===code)?.name}…`);
+    try{
+      const result=await runTranslation(data,code);
+      setTranslations(p=>({...p,[code]:result}));
+      setLang(code);
+      showToast(`✅ ${LANGS.find(l=>l.code===code)?.name} ready!`);
+    }catch{showToast("❌ Translation failed. Try again.");}
+    finally{setTranslating(false);}
+  };
+
+  const tx=lang!=="en"?translations[lang]:null;
+  const uiTx=tx?.ui||null;
+  const navTx=tx?.navLabels||null;
+  const getNavLabel=id=>{const i=NAV.findIndex(n=>n.id===id);return navTx?.[i]||NAV[i]?.label;};
+
+  return (
+    <div style={{ fontFamily:"'Nunito',sans-serif",background:"#f5faf6",minHeight:"100vh" }}>
+      {/* NAV */}
+      <nav style={{ position:"sticky",top:0,zIndex:100,background:"#fff",borderBottom:"2px solid #e0f0e6",padding:"0 16px",display:"flex",alignItems:"center",justifyContent:"space-between",height:62,boxShadow:"0 2px 16px rgba(0,0,0,0.07)",gap:8 }}>
+        <button onClick={()=>setPage("home")} style={{ background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0 }}>
+          <div style={{ fontWeight:900,fontSize:15,color:"#1a3a2a" }}>Know Your Rights</div>
+          <div style={{ fontSize:10,color:"#6b8c76",fontWeight:700,letterSpacing:"0.08em" }}>SANTA CRUZ COUNTY</div>
+        </button>
+        <div style={{ display:"flex",gap:2,overflow:"hidden",flex:1,justifyContent:"center" }}>
+          {NAV.slice(0,5).map(n=>(
+            <button key={n.id} onClick={()=>setPage(n.id)} style={{ background:page===n.id?"#f0faf4":"none",border:"none",cursor:"pointer",color:page===n.id?"#2d7a4f":"#6b8c76",fontWeight:page===n.id?800:600,fontSize:11,padding:"5px 8px",borderRadius:7,whiteSpace:"nowrap" }}>{getNavLabel(n.id)}</button>
+          ))}
+        </div>
+        <div style={{ display:"flex",gap:6,alignItems:"center",flexShrink:0 }}>
+          <div style={{ display:"flex",background:"#f0faf4",borderRadius:10,padding:3,gap:2,border:"1.5px solid #d4eedd" }}>
+            {LANGS.map(l=>(
+              <button key={l.code} onClick={()=>handleLang(l.code)} disabled={translating&&l.code!==lang} title={l.name}
+                style={{ fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:11,border:"none",borderRadius:7,padding:"5px 10px",cursor:translating?"wait":"pointer",background:lang===l.code?"#2d7a4f":"transparent",color:lang===l.code?"#fff":"#6b8c76",transition:"all .2s",whiteSpace:"nowrap" }}>
+                {translating&&l.code===lang&&l.code!=="en"?"…":l.label}
+              </button>
+            ))}
+          </div>
+          {editing?<>
+            <Btn variant="gold" style={{ fontSize:11,padding:"6px 12px" }} onClick={()=>save(data)}>💾 Save</Btn>
+            <Btn variant="secondary" style={{ fontSize:11,padding:"6px 12px" }} onClick={()=>{setEditing(false);showToast("✅ Exited edit mode");}}>Done</Btn>
+          </>:<Btn variant="secondary" style={{ fontSize:11,padding:"6px 12px",color:"#6b8c76" }} onClick={()=>{setLoginOpen(true);setPwErr("");setPw("");}}>✏️ Edit</Btn>}
+          <button onClick={()=>setMobileOpen(o=>!o)} style={{ background:"none",border:"none",cursor:"pointer",padding:6,display:"flex",flexDirection:"column",gap:4 }}>
+            {[0,1,2].map(i=><span key={i} style={{ display:"block",width:18,height:2,background:"#6b8c76",borderRadius:2 }}/>)}
+          </button>
+        </div>
+      </nav>
+
+      {mobileOpen&&(
+        <div style={{ background:"#fff",borderBottom:"1px solid #e0f0e6",padding:"12px 20px",zIndex:99,position:"relative" }}>
+          {NAV.map(n=><button key={n.id} onClick={()=>{setPage(n.id);setMobileOpen(false);}} style={{ display:"block",width:"100%",textAlign:"left",background:"none",border:"none",cursor:"pointer",padding:"10px 8px",fontWeight:600,fontSize:14,color:"#2d4a36",borderRadius:8 }}>{getNavLabel(n.id)}</button>)}
+        </div>
+      )}
+
+      {editing&&<div style={{ background:"#fffbea",borderBottom:"2px solid #f5a623",padding:"10px 24px",display:"flex",alignItems:"center",gap:10,fontSize:13,color:"#7a5a00",fontWeight:700 }}>
+        <span style={{ width:8,height:8,borderRadius:"50%",background:"#f5a623",display:"inline-block" }}/>
+        {uiTx?.editBanner||"Edit mode ON — click any text to edit. Changes save automatically."}
+      </div>}
+
+      {translating&&<div style={{ background:"#f0f8ff",borderBottom:"2px solid #5b8dd9",padding:"10px 24px",fontSize:13,color:"#2a4a7a",fontWeight:700,textAlign:"center" }}>🌐 Translating entire site… just a moment…</div>}
+
+      {page==="home"&&<HomePage data={data} editing={editing} onNavigate={setPage} onUpdateHome={v=>updatePage("home",v)} tx={tx} uiTx={uiTx} navTx={navTx}/>}
+      {page==="resources"&&<ResourcesPage resources={data.resources} editing={editing} onUpdate={updateResources} onBack={()=>setPage("home")} tx={tx} uiTx={uiTx}/>}
+      {["ice-stop","ice-door","police-door","traffic","arrested","work","school"].includes(page)&&<RightsPage pageId={page} data={data} editing={editing} onUpdate={v=>updatePage(page,v)} onBack={()=>setPage("home")} tx={tx} uiTx={uiTx}/>}
+
+      <footer style={{ background:"#1a3a2a",color:"rgba(255,255,255,0.5)",textAlign:"center",padding:"32px 24px",fontSize:13,lineHeight:1.7,marginTop:40 }}>
+        <div style={{ fontWeight:700,color:"rgba(255,255,255,0.8)",marginBottom:6 }}>Know Your Rights – Santa Cruz County</div>
+        {uiTx?.footerNote||"This website provides general information only and is not legal advice. Consult a qualified immigration attorney."}
+      </footer>
+
+      <Modal open={loginOpen} onClose={()=>setLoginOpen(false)} title="🔒 Admin Login">
+        <p style={{ fontSize:14,color:"#4a6a54",marginBottom:20 }}>Only the site administrator can edit this website.</p>
+        <div style={{ marginBottom:14 }}>
+          <div style={{ fontSize:12,fontWeight:700,color:"#6b8c76",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:6 }}>Password</div>
+          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&checkLogin()} placeholder="Enter password" autoFocus
+            style={{ width:"100%",borderRadius:10,border:"1.5px solid #d4e6da",padding:"10px 14px",fontFamily:"'Nunito',sans-serif",fontSize:14,color:"#1a3a2a",background:"#f7fcf8",outline:"none",boxSizing:"border-box" }}/>
+        </div>
+        {pwErr&&<div style={{ color:"#c0392b",fontSize:13,marginBottom:12 }}>{pwErr}</div>}
+        <div style={{ fontSize:12,color:"#8aaa94",marginBottom:20,background:"#f0faf4",borderRadius:8,padding:"10px 14px" }}>Default password: <strong>SantaCruz2025</strong></div>
+        <div style={{ display:"flex",gap:10,justifyContent:"flex-end" }}>
+          <Btn variant="secondary" onClick={()=>setLoginOpen(false)}>Cancel</Btn>
+          <Btn variant="primary" onClick={checkLogin}>Enter Edit Mode</Btn>
+        </div>
+      </Modal>
+
+      {toast&&<Toast msg={toast}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
